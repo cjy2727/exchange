@@ -2,7 +2,9 @@
 import argparse
 import io
 import json
+import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import threading
@@ -28,7 +30,7 @@ LOCK = threading.Lock()
 
 
 def database():
-    DB.parent.mkdir(exist_ok=True)
+    DB.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB)
     con.execute('CREATE TABLE IF NOT EXISTS history (id TEXT PRIMARY KEY, created TEXT, payload TEXT)')
     con.execute('CREATE TABLE IF NOT EXISTS settings (code TEXT PRIMARY KEY, discount TEXT)')
@@ -117,7 +119,10 @@ def get_rates(day):
         form = urlencode(dict(ajax='true', curCd='', tmpInqStrDt=day, inqStrDt=day.replace('-', ''), pbldDvCd='3' if selected == datetime.now(KST).date() else '0', pbldSqn='', inqKindCd='1', requestTarget='searchContentDiv'))
         # curl uses the OS certificate store on Windows; certificate verification stays enabled.
         try:
-            result = subprocess.run(['curl', '--silent', '--show-error', '--fail', '--max-time', '20', '--max-filesize', '1000000', '--referer', SOURCE, '--data', form, ENDPOINT], capture_output=True, timeout=25)
+            curl = shutil.which('curl.exe' if os.name == 'nt' else 'curl')
+            if not curl:
+                raise OSError('curl not found')
+            result = subprocess.run([curl, '--silent', '--show-error', '--fail', '--max-time', '20', '--max-filesize', '1000000', '--referer', SOURCE, '--data', form, ENDPOINT], capture_output=True, timeout=25, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise RuntimeError('환율 서버 연결에 실패했습니다. curl 설치와 인터넷 연결을 확인해 주세요.') from exc
         if result.returncode:
@@ -204,6 +209,13 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):
                 raise ValueError('JSON 객체가 필요합니다.')
+            if url.path == '/api/shutdown':
+                token = getattr(self.server, 'instance_token', None)
+                if not token or body.get('token') != token:
+                    return self.send({'error':'종료 요청을 확인할 수 없습니다.'}, 403)
+                self.send({'stopped': True})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
             if url.path == '/api/settings':
                 values = [(c, str(number(body[c], high=Decimal('100')))) for c in CURRENCIES]
                 with database() as con:
@@ -216,6 +228,8 @@ class Handler(BaseHTTPRequestHandler):
                         con.execute('INSERT INTO history VALUES (?,?,?)', (str(uuid.uuid4()), datetime.now(KST).isoformat(), json.dumps(result)))
                 return self.send(result)
         elif self.command == 'GET':
+            if url.path == '/api/health':
+                return self.send({'app':'ExchangeStudio', 'token':getattr(self.server, 'instance_token', None)})
             if url.path == '/api/rates':
                 return self.send(get_rates(parse_qs(url.query).get('date', [datetime.now(KST).date().isoformat()])[0]))
             if url.path == '/api/settings':

@@ -4,6 +4,27 @@ const today = () => new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Seoul'}).fo
 let snapshot = null, settings = {USD:90, JPY:90, CNY:50}, calculation = null, calculating = false, loading = false;
 const flags = {USD:'🇺🇸', JPY:'🇯🇵', CNY:'🇨🇳'};
 const message = text => { $('notice').textContent = text; };
+async function setupShutdown() {
+  try {
+    const health = await api('/api/health');
+    if (!health.token) return;
+    const button = document.createElement('button');
+    button.className = 'secondary'; button.textContent = '프로그램 종료';
+    document.querySelector('header').append(button);
+    button.addEventListener('click', async () => {
+      if (!confirm('프로그램을 종료할까요? 저장하지 않은 계산은 보관되지 않습니다.')) return;
+      button.disabled = true;
+      try {
+        await api('/api/shutdown', {token:health.token});
+        document.querySelector('main').replaceChildren();
+        const text = document.createElement('p');
+        text.textContent = '프로그램이 종료되었습니다. 이 탭을 닫아 주세요. 다시 사용하려면 ExchangeStudio를 실행하세요.';
+        document.querySelector('main').append(text);
+        button.textContent = '종료됨';
+      } catch(error) { message(error.message); button.disabled = false; }
+    });
+  } catch(error) { message(error.message); }
+}
 async function api(path, body) {
   const response = await fetch(path, body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   const result = await response.json();
@@ -78,6 +99,7 @@ $('date').addEventListener('change', () => { snapshot = null; renderCards(); inv
 $('load').addEventListener('click', loadRates);
 $('today').addEventListener('click', () => { $('date').value = today(); loadRates(); });
 (async () => {
+  await setupShutdown();
   $('date').value = today(); $('date').max = today(); $('calculate').disabled = true;
   try { settings = await api('/api/settings'); $('discount').value = settings.USD; await loadHistory(); } catch(error) { message(error.message); }
   await loadRates();

@@ -2,3 +2,6 @@ data/
 __pycache__/
 *.tmp.html
 *.xlsx
+build/
+dist/
+.venv-build/

@@ -2,16 +2,28 @@
 
 하나은행 환율 조회와 엑셀 우대율 계산을 연결한 로컬 웹 프로젝트입니다.
 
+## Windows 사용자: Python 없이 실행
+
+1. [Releases](https://github.com/cjy2727/exchange/releases)에서 `ExchangeStudio-Windows.zip`을 다운로드합니다. 배포 파일이 아직 없다면 아래 소스 실행 방법을 사용하세요.
+2. ZIP 전체를 압축 해제하고 `ExchangeStudio.exe`를 실행합니다. `_internal` 폴더도 함께 보관하세요.
+3. 기본 브라우저가 자동으로 열립니다. 종료할 때는 화면 상단 **프로그램 종료**를 누릅니다.
+
+지원 환경: Windows 10/11 x64, 인터넷 연결, Windows 기본 `curl.exe`. 관리자 권한이나 Python 설치는 필요하지 않습니다. 배포판은 코드 서명되지 않았으므로 Windows 보안 확인이 나타날 수 있습니다.
+
+기록·설정은 `%LOCALAPPDATA%\ExchangeStudio\exchange.sqlite3`, 로그는 같은 폴더의 `app.log`에 저장합니다. 업데이트할 때는 프로그램을 종료하고 새 ZIP을 풀어 실행하면 기존 기록을 계속 사용합니다. 소스 버전의 `data` 폴더는 자동 이동하지 않습니다. 기록을 가져오는 방법은 [Windows 안내](docs/WINDOWS-README.txt)를 참고하세요.
+
+프로그램을 중복 실행하면 기존 화면을 다시 엽니다. 8080 포트를 다른 프로그램이 사용하면 빈 포트를 자동으로 선택합니다. 브라우저 탭을 닫는 것만으로 프로그램이 종료되지는 않습니다.
+
 ## 실행
 
 Python 3.9 이상과 curl이 필요합니다. Windows 10/11 기본 curl을 사용하며 별도 Python 패키지는 필요하지 않습니다.
 
 ```powershell
 cd D:\exchange
-python app.py
+python launcher.py
 ```
 
-브라우저에서 http://localhost:8080 을 엽니다. `start.bat`으로도 실행할 수 있습니다. 포트 변경: `python app.py --port 8081`. 종료: Ctrl+C.
+기본 브라우저가 자동으로 열립니다. `start.bat`으로도 실행할 수 있습니다. 포트 변경: `python launcher.py --port 8081`. 자동 열기 없이 실행: `python launcher.py --no-browser`. 종료: 화면의 프로그램 종료 또는 Ctrl+C. `python app.py`는 브라우저 자동 열기·중복 실행 관리 없는 기존 서버 실행 방식입니다.
 
 ## 기능
 
@@ -52,3 +64,29 @@ node --check static/app.js
 
 `app.py`: API, 하나은행 어댑터, 계산, 저장, XLSX 생성.
 `static/`: 화면. `tests/`: 엑셀 예제·엔 단위·입력 검증·은행 파서·저장·내보내기 검증.
+
+## Windows 배포 파일 만들기
+
+Windows x64 Python 환경에서 실행합니다. 빌드 도구는 사용자 실행 시 필요하지 않습니다.
+
+```powershell
+python -m venv .venv-build
+.\.venv-build\Scripts\python.exe -m pip install -r requirements-build.txt
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Python .\.venv-build\Scripts\python.exe
+.\.venv-build\Scripts\python.exe scripts\smoke_exe.py
+```
+
+결과: `dist/ExchangeStudio-Windows.zip`, `dist/SHA256SUMS.txt`. ZIP에는 실행에 필요한 파일만 포함되며 개발자의 `data` 폴더는 포함하지 않습니다. 실제 EXE 검증은 별도의 임시 사용자 데이터 폴더에서 실행합니다.
+
+## GitHub Releases 자동 배포
+
+`.github/workflows/release.yml`은 `v*` 태그가 GitHub에 올라오면 테스트 → Windows 빌드 → 실제 EXE 검증 → Releases 업로드를 진행합니다. 일반 브랜치 push에는 릴리스를 만들지 않습니다. Actions에서 수동 실행하면 다운로드 가능한 빌드 아티팩트만 만들고 릴리스는 게시하지 않습니다.
+
+변경 내용을 커밋하고 원격에 반영한 뒤, 게시할 버전을 선택해 태그를 올립니다. 예시:
+
+```powershell
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+이미 사용한 버전 태그를 재사용하지 마세요. GitHub Actions 실행 및 실제 릴리스 게시 여부는 저장소 Actions/Releases에서 확인합니다.
