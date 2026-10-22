@@ -1,5 +1,6 @@
 import io
 import json
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -69,6 +70,35 @@ class CalculationTests(unittest.TestCase):
             self.assertIsNone(z.testzip())
             for name in z.namelist(): ElementTree.fromstring(z.read(name))
             self.assertIn('1329130', z.read('xl/worksheets/sheet1.xml').decode())
+
+
+class DatabaseTests(unittest.TestCase):
+    def test_commit_and_close_without_garbage_collection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'test.sqlite3'
+            with patch.object(app, 'DB', path):
+                with app.database() as con:
+                    con.execute("INSERT INTO settings VALUES ('USD', '90')")
+                # Keep con referenced so GC cannot hide an unclosed connection.
+                with self.assertRaises(sqlite3.ProgrammingError):
+                    con.execute('SELECT 1')
+                with app.database() as reader:
+                    self.assertEqual(reader.execute('SELECT discount FROM settings').fetchone()[0], '90')
+                path.unlink()  # Windows must release the file immediately.
+
+    def test_rollback_also_closes_connection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'test.sqlite3'
+            with patch.object(app, 'DB', path):
+                with self.assertRaisesRegex(RuntimeError, 'abort'):
+                    with app.database() as con:
+                        con.execute("INSERT INTO settings VALUES ('USD', '90')")
+                        raise RuntimeError('abort')
+                with self.assertRaises(sqlite3.ProgrammingError):
+                    con.execute('SELECT 1')
+                with app.database() as reader:
+                    self.assertEqual(reader.execute('SELECT count(*) FROM settings').fetchone()[0], 0)
+                path.unlink()
 
 
 class ApiTests(unittest.TestCase):

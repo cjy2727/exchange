@@ -11,6 +11,7 @@ import threading
 import time
 import uuid
 import zipfile
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from html.parser import HTMLParser
@@ -29,12 +30,18 @@ CACHE = {}
 LOCK = threading.Lock()
 
 
+@contextmanager
 def database():
     DB.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB)
-    con.execute('CREATE TABLE IF NOT EXISTS history (id TEXT PRIMARY KEY, created TEXT, payload TEXT)')
-    con.execute('CREATE TABLE IF NOT EXISTS settings (code TEXT PRIMARY KEY, discount TEXT)')
-    return con
+    try:
+        # sqlite3's context manager commits/rolls back, but does not close.
+        with con:
+            con.execute('CREATE TABLE IF NOT EXISTS history (id TEXT PRIMARY KEY, created TEXT, payload TEXT)')
+            con.execute('CREATE TABLE IF NOT EXISTS settings (code TEXT PRIMARY KEY, discount TEXT)')
+            yield con
+    finally:
+        con.close()
 
 
 def number(value, low=Decimal('0'), high=Decimal('1000000000000')):
