@@ -5,3 +5,14 @@ __pycache__/
 build/
 dist/
 .venv-build/
+.tools/
+.android-signing/
+.gradle-user-home/
+.vscode/
+android/.gradle/
+android/local.properties
+android/**/build/
+android/**/bin/
+android/*.log
+*.jks
+*.keystore

@@ -1,0 +1,38 @@
+plugins { id 'com.android.application' }
+
+def versionCodeEnv = System.getenv('ANDROID_VERSION_CODE')
+def versionNameEnv = System.getenv('ANDROID_VERSION_NAME')
+
+android {
+    namespace 'com.cjy2727.exchange'
+    compileSdkVersion 35
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    useLibrary 'android.test.mock'
+    defaultConfig {
+        applicationId 'com.cjy2727.exchange'
+        minSdk 26
+        targetSdkVersion 35
+        versionCode ((versionCodeEnv != null && versionCodeEnv.trim()) ? versionCodeEnv.trim().toInteger() : 1)
+        versionName ((versionNameEnv != null && versionNameEnv.trim()) ? versionNameEnv.trim() : '0.1.0')
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    signingConfigs {
+        release {
+            if (System.getenv('EXCHANGE_KEYSTORE')) {
+                storeFile file(System.getenv('EXCHANGE_KEYSTORE'))
+                storePassword System.getenv('EXCHANGE_STORE_PASSWORD')
+                keyAlias 'exchange'
+                keyPassword System.getenv('EXCHANGE_STORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release { signingConfig signingConfigs.release; minifyEnabled false }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    sourceSets {
+        main.assets.srcDirs = ['../../static', 'src/main/assets']
+        androidTest.assets.srcDirs = ['../../tests']
+    }
+}
