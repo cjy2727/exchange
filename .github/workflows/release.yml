@@ -29,6 +29,9 @@ jobs:
             dist/SHA256SUMS.txt
   build-android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -46,10 +49,7 @@ jobs:
           curl -L -o "$RUNNER_TEMP/gradle-8.7-bin.zip" https://services.gradle.org/distributions/gradle-8.7-bin.zip
           unzip -q "$RUNNER_TEMP/gradle-8.7-bin.zip" -d "$RUNNER_TEMP"
       - name: Restore Android signing key
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_STORE_PASSWORD != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_STORE_PASSWORD != '' }}
         run: |
           mkdir -p .android-signing
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > .android-signing/exchange-release.jks
