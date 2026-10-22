@@ -10,6 +10,8 @@ PC를 켜 두지 않아도 휴대폰에서 환율 조회·계산·기록 저장�
 
 Play 스토어에 등록된 앱은 아니며 APK를 직접 설치하는 방식입니다.
 
+APK 바로 다운로드: https://github.com/cjy2727/exchange/releases/latest/download/ExchangeStudio-Android.apk
+
 ## 사용하기
 
 - 날짜를 선택해 환율을 조회하고 통화·현찰/송금·외화 금액·우대율을 입력하세요.

@@ -4,6 +4,8 @@
 
 **안드로이드폰에서 사용하려면:** [안드로이드 설치·사용 안내](docs/ANDROID-README.md)를 참고하세요. 휴대폰용 파일 이름은 `ExchangeStudio-Android.apk`이며, PC 없이 단독으로 실행합니다. Windows용 ZIP과 별도로 배포합니다.
 
+**[안드로이드 APK 바로 다운로드](https://github.com/cjy2727/exchange/releases/latest/download/ExchangeStudio-Android.apk)**
+
 ## 처음 사용하시나요? 여기서 시작하세요
 
 별도 설치 과정 없이 다운로드해서 실행할 수 있습니다. **Windows 10·11의 64비트(x64) PC**에서 사용할 수 있으며, 환율 조회에는 인터넷 연결이 필요합니다.
@@ -12,11 +14,12 @@
 
 **[여기를 눌러 최신 버전 다운로드 페이지를 여세요](https://github.com/cjy2727/exchange/releases/latest).**
 
-페이지 아래쪽의 **Assets**를 눌러 펼친 뒤, **`ExchangeStudio-Windows.zip`**을 클릭하세요.
+페이지 아래쪽의 **Assets**를 눌러 펼친 뒤, **`ExchangeStudio-Windows.zip`** 또는 **`ExchangeStudio-Android.apk`**를 클릭하세요.
 
 | 보이는 파일 | 선택 방법 |
 | --- | --- |
 | **ExchangeStudio-Windows.zip** | **이 파일을 다운로드하세요.** |
+| **ExchangeStudio-Android.apk** | **안드로이드폰에서 사용하는 설치 파일입니다.** |
 | SHA256SUMS.txt | 파일 확인용입니다. 실행할 때는 필요하지 않습니다. |
 | Source code (zip) / Source code (tar.gz) | 개발용 소스입니다. 실행파일이 들어 있지 않습니다. |
 
