@@ -1,6 +1,8 @@
 import io
 import json
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -99,6 +101,26 @@ class DatabaseTests(unittest.TestCase):
                 with app.database() as reader:
                     self.assertEqual(reader.execute('SELECT count(*) FROM settings').fetchone()[0], 0)
                 path.unlink()
+
+
+class DirectServerTests(unittest.TestCase):
+    def test_direct_entry_point_can_shutdown(self):
+        process = subprocess.Popen([sys.executable, str(app.ROOT / 'app.py'), '--port', '0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            url = process.stdout.readline().strip().split('Exchange Studio: ', 1)[1]
+            with urllib.request.urlopen(url + '/api/health', timeout=5) as response:
+                token = json.load(response)['token']
+            self.assertTrue(token)
+            with urllib.request.urlopen(url, timeout=5) as response:
+                self.assertIn(b'id="shutdown"', response.read())
+            request = urllib.request.Request(url + '/api/shutdown', data=json.dumps({'token':token}).encode(), headers={'Content-Type':'application/json'})
+            with urllib.request.urlopen(request, timeout=5) as response:
+                self.assertTrue(json.load(response)['stopped'])
+            self.assertEqual(process.wait(timeout=5), 0)
+        finally:
+            if process.poll() is None:
+                process.terminate(); process.wait(timeout=5)
+            process.stdout.close(); process.stderr.close()
 
 
 class ApiTests(unittest.TestCase):

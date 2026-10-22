@@ -5,16 +5,13 @@ let snapshot = null, settings = {USD:90, JPY:90, CNY:50}, calculation = null, ca
 const flags = {USD:'🇺🇸', JPY:'🇯🇵', CNY:'🇨🇳'};
 const message = text => { $('notice').textContent = text; };
 async function setupShutdown() {
-  try {
-    const health = await api('/api/health');
-    if (!health.token) return;
-    const button = document.createElement('button');
-    button.className = 'secondary'; button.textContent = '프로그램 종료';
-    document.querySelector('header').append(button);
+    const button = $('shutdown');
     button.addEventListener('click', async () => {
       if (!confirm('프로그램을 종료할까요? 저장하지 않은 계산은 보관되지 않습니다.')) return;
       button.disabled = true;
       try {
+        const health = await api('/api/health');
+        if (!health.token) throw new Error('실행 중인 서버는 화면 종료 기능을 지원하지 않습니다. 기존 프로그램을 종료한 뒤 최신 버전으로 다시 실행해 주세요.');
         await api('/api/shutdown', {token:health.token});
         document.querySelector('main').replaceChildren();
         const text = document.createElement('p');
@@ -23,7 +20,6 @@ async function setupShutdown() {
         button.textContent = '종료됨';
       } catch(error) { message(error.message); button.disabled = false; }
     });
-  } catch(error) { message(error.message); }
 }
 async function api(path, body) {
   const response = await fetch(path, body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});

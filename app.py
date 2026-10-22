@@ -4,6 +4,7 @@ import io
 import json
 import os
 import re
+import secrets
 import shutil
 import sqlite3
 import subprocess
@@ -274,5 +275,9 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8080)
     args = parser.parse_args()
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
-    print(f'Exchange Studio: http://localhost:{args.port}', flush=True)
-    server.serve_forever()
+    server.instance_token = secrets.token_urlsafe(32)
+    print(f'Exchange Studio: http://localhost:{server.server_port}', flush=True)
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
