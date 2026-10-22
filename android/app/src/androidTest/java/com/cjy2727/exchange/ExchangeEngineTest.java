@@ -76,4 +76,14 @@ public class ExchangeEngineTest extends InstrumentationTestCase {
         try { ExchangeEngine.parseRates("<html>점검 중</html>", "2026-10-22"); fail("Accepted invalid page"); }
         catch (IllegalArgumentException expected) { }
     }
+
+    public void testParseRatesWithFallbackCharset() throws Exception {
+        String html;
+        try (InputStream input = getInstrumentation().getContext().getAssets().open("hana-fixture.html")) {
+            html = new String(ExchangeEngine.readLimited(input, 1000000), StandardCharsets.UTF_8);
+        }
+        byte[] cp949 = html.getBytes("MS949");
+        JSONObject parsed = ExchangeEngine.parseRatesWithFallback(cp949, "2026-10-22", "text/html; charset=MS949");
+        assertEquals(400, parsed.getInt("sequence"));
+    }
 }

@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -39,6 +40,31 @@ public final class ExchangeEngine {
     static String clean(String html) {
         return html.replaceAll("(?s)<[^>]*>", " ").replace("&nbsp;", " ")
                 .replace("&#160;", " ").replaceAll("\\s+", " ").trim();
+    }
+
+    static JSONObject parseRatesWithFallback(byte[] payload, String requested, String contentType) throws Exception {
+        List<String> candidates = new ArrayList<>();
+        if (contentType != null) {
+            Matcher charset = Pattern.compile("(?i)charset=([A-Za-z0-9._-]+)").matcher(contentType);
+            if (charset.find()) candidates.add(charset.group(1));
+        }
+        candidates.add("UTF-8");
+        candidates.add("EUC-KR");
+        candidates.add("CP949");
+
+        IllegalArgumentException last = null;
+        for (String name : candidates) {
+            try {
+                String html = new String(payload, Charset.forName(name));
+                return parseRates(html, requested);
+            } catch (IllegalArgumentException e) {
+                last = e;
+            } catch (Exception ignored) {
+                // Unsupported charset or decoding failure; try next candidate.
+            }
+        }
+        if (last != null) throw last;
+        throw new IllegalArgumentException("은행 고시 정보를 확인하지 못했습니다.");
     }
 
     public static JSONObject parseRates(String html, String requested) throws Exception {
@@ -94,13 +120,19 @@ public final class ExchangeEngine {
         connection.setRequestMethod("POST"); connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
         connection.setRequestProperty("Referer", SOURCE);
+        connection.setRequestProperty("Accept", "text/html, */*;q=0.8");
+        connection.setRequestProperty("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.7,en;q=0.6");
+        connection.setRequestProperty("Origin", "https://www.kebhana.com");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36");
+        connection.setRequestProperty("X-Requested-With", "XMLHttpRequest");
         String form = "ajax=true&curCd=&tmpInqStrDt=" + day + "&inqStrDt=" + day.replace("-", "")
                 + "&pbldDvCd=" + (selected.equals(today) ? "3" : "0") + "&pbldSqn=&inqKindCd=1&requestTarget=searchContentDiv";
         try {
             try (OutputStream output = connection.getOutputStream()) { output.write(form.getBytes(StandardCharsets.UTF_8)); }
             if (connection.getResponseCode() != 200) throw new java.io.IOException("은행 응답 오류");
             try (InputStream input = connection.getInputStream()) {
-                cached = parseRates(new String(readLimited(input, 1000000), StandardCharsets.UTF_8), day);
+            byte[] payload = readLimited(input, 1000000);
+            cached = parseRatesWithFallback(payload, day, connection.getContentType());
                 cachedAt = android.os.SystemClock.elapsedRealtime();
                 return cached;
             }
